@@ -33,7 +33,7 @@ func New(url string, requests int, concurrency int) *StressTest {
 	}
 }
 
-func (s *StressTest) Run() {
+func (s *StressTest) Run() *StressTestResult {
 	var testInit = time.Now()
 
 	fmt.Println(time.Now().Format("2006-01-02 15:04:05"), "- Running stress test...")
@@ -60,6 +60,8 @@ func (s *StressTest) Run() {
 	fmt.Println(time.Now().Format("2006-01-02 15:04:05"), "- Stress test finished!")
 
 	s.printResult(result)
+
+	return result
 }
 
 func (s *StressTest) loadReqsToExec() {
