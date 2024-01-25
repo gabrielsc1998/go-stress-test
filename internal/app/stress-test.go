@@ -12,6 +12,7 @@ type StressTest struct {
 	Url         string
 	Requests    int
 	Concurrency int
+	ReqsToExec  []int
 }
 
 type StressTestResult struct {
@@ -28,6 +29,7 @@ func New(url string, requests int, concurrency int) *StressTest {
 		Url:         url,
 		Requests:    requests,
 		Concurrency: concurrency,
+		ReqsToExec:  make([]int, concurrency),
 	}
 }
 
@@ -42,20 +44,30 @@ func (s *StressTest) Run() {
 		StatusCodes: make(map[int]int),
 	}
 
+	s.loadReqsToExec()
+
 	for i := 0; i < s.Concurrency; i++ {
 		wg.Add(1)
-		go func() {
+		go func(i int) {
 			defer wg.Done()
-			s.run(result)
-		}()
+			s.run(result, i)
+		}(i)
 	}
 
 	wg.Wait()
 
 	result.TotalTime = time.Since(testInit).Seconds()
-
 	fmt.Println(time.Now().Format("2006-01-02 15:04:05"), "- Stress test finished!")
+
 	s.printResult(result)
+}
+
+func (s *StressTest) loadReqsToExec() {
+	var reqsToExec int = s.Requests / s.Concurrency
+	for i := 0; i < s.Concurrency-1; i++ {
+		s.ReqsToExec[i] = reqsToExec
+	}
+	s.ReqsToExec[s.Concurrency-1] = reqsToExec + (s.Requests % s.Concurrency)
 }
 
 func (s *StressTest) printResult(result *StressTestResult) {
@@ -75,8 +87,8 @@ func (s *StressTest) printResult(result *StressTestResult) {
 	fmt.Println("\n-----------------------------")
 }
 
-func (s *StressTest) run(result *StressTestResult) {
-	for i := 0; i < s.Requests/s.Concurrency; i++ {
+func (s *StressTest) run(result *StressTestResult, current int) {
+	for i := 0; i < s.ReqsToExec[current]; i++ {
 		resp, err := http_client.Get(s.Url)
 
 		mutex.Lock()
